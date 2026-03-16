@@ -281,12 +281,12 @@ export default function Home() {
         <nav className="nav-wrap" style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.09)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Alien-Protocol.png" alt="Alien Protocol Logo" width={40} height={40} style={{ display: "block", mixBlendMode: "screen" }} />
+            <img src="/Alien-Protocol_2.png" alt="Alien Protocol Logo" width={40} height={40} style={{ display: "block", mixBlendMode: "screen" }} />
             <span className="nav-brand-text font-orbitron shimmer-text" style={{ fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase" }}>
               Alien Protocol
             </span>
           </div>
-          <a href="https://github.com/Alien-Protocol/Alien-Gateway" target="_blank" rel="noreferrer" className="github-btn">
+          <a href="https://github.com/Alien-Protocol" target="_blank" rel="noreferrer" className="github-btn">
             GitHub ↗
           </a>
         </nav>
@@ -300,7 +300,7 @@ export default function Home() {
             style={{ marginBottom: 32, animation: visible ? "fadeSlideUp 0.6s ease forwards, glow-pulse 3s ease-in-out 0.6s infinite" : undefined }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Alien-Protocol.png" alt="Alien Protocol" className="hero-logo" style={{ display: "block", mixBlendMode: "screen" }} />
+            <img src="/Alien-Protocol_2.png" alt="Alien Protocol" className="hero-logo" style={{ display: "block", mixBlendMode: "screen" }} />
           </div>
 
           {/* Brand name */}
@@ -384,7 +384,7 @@ export default function Home() {
           </div>
 
           <div className="footer-links font-raj" style={{ display: "flex", alignItems: "center", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", flexWrap: "wrap" }}>
-            <a href="https://github.com/Alien-Protocol/Alien-Gateway" target="_blank" rel="noreferrer" className="footer-link">GitHub</a>
+            <a href="https://github.com/Alien-Protocol" target="_blank" rel="noreferrer" className="footer-link">GitHub</a>
             <span>Built on Stellar</span>
             <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 7, height: 7, backgroundColor: "rgba(255,255,255,0.6)", display: "inline-block", borderRadius: "50%", animation: "blink 2s infinite" }} />
