@@ -39,166 +39,355 @@ function Starfield() {
     draw();
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
   }, []);
-  return (
-    <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }} />
-  );
+  return <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }} />;
+}
+
+// Typewriter hook
+function useTypewriter(texts: string[], speed = 60, pause = 2200) {
+  const [display, setDisplay] = useState("");
+  const [textIdx, setTextIdx] = useState(0);
+  const [charIdx, setCharIdx] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const current = texts[textIdx];
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (!deleting && charIdx <= current.length) {
+      timeout = setTimeout(() => {
+        setDisplay(current.slice(0, charIdx));
+        setCharIdx((c) => c + 1);
+      }, speed);
+    } else if (!deleting && charIdx > current.length) {
+      timeout = setTimeout(() => setDeleting(true), pause);
+    } else if (deleting && charIdx >= 0) {
+      timeout = setTimeout(() => {
+        setDisplay(current.slice(0, charIdx));
+        setCharIdx((c) => c - 1);
+      }, speed / 2);
+    } else {
+      setDeleting(false);
+      setTextIdx((i) => (i + 1) % texts.length);
+    }
+    return () => clearTimeout(timeout);
+  }, [charIdx, deleting, textIdx, texts, speed, pause]);
+
+  return display;
 }
 
 export default function Home() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [btnHover, setBtnHover] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  const typed = useTypewriter([
+    "Privacy-preserving usernames for Stellar.",
+    "Send crypto to @username — not a long address.",
+    "Your identity. Zero-knowledge. On-chain.",
+    "One username. One identity. Built for Stellar.",
+  ]);
+
+  // Fade-in hero on mount
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <>
-      {/* Google Fonts — Orbitron (sci-fi / alien movie font) */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Exo+2:wght@300;400;600;700;800&family=Rajdhani:wght@400;600;700&display=swap');
 
         @keyframes blink {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0.1; }
+          50%       { opacity: 0.08; }
         }
         @keyframes glow-pulse {
-          0%, 100% { filter: drop-shadow(0 0 18px rgba(255,255,255,0.25)); }
-          50%       { filter: drop-shadow(0 0 42px rgba(255,255,255,0.55)); }
+          0%, 100% { filter: drop-shadow(0 0 14px rgba(255,255,255,0.2)); }
+          50%       { filter: drop-shadow(0 0 42px rgba(255,255,255,0.6)); }
+        }
+        @keyframes badge-flicker {
+          0%,94%,100% { opacity: 1; }
+          95%  { opacity: 0.6; }
+          96%  { opacity: 1; }
+          98%  { opacity: 0.7; }
+        }
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(28px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
+        @keyframes btn-pulse {
+          0%, 100% { box-shadow: 0 0 0px rgba(255,255,255,0); }
+          50%       { box-shadow: 0 0 18px rgba(255,255,255,0.35), 0 0 40px rgba(255,255,255,0.12); }
+        }
+        @keyframes scan {
+          0%   { transform: translateY(-100%); }
+          100% { transform: translateY(100vh); }
+        }
+        @keyframes cursor-blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #000; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; }
+        body { background: #000; -webkit-font-smoothing: antialiased; }
         ::selection { background: #fff; color: #000; }
         ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
-        input::placeholder { color: rgba(255,255,255,0.25); font-family: 'Orbitron', monospace; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
 
-        .orbitron { font-family: 'Orbitron', 'Courier New', monospace; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        .font-exo      { font-family: 'Exo 2', sans-serif; }
+        .font-raj      { font-family: 'Rajdhani', sans-serif; }
 
-        nav a.github-btn:hover {
-          border-color: rgba(255,255,255,0.7) !important;
-          color: #fff !important;
+        /* shimmer text */
+        .shimmer-text {
+          background: linear-gradient(90deg, rgba(255,255,255,0.5) 0%, #fff 40%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0.3) 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          animation: shimmer 3s linear infinite;
         }
-        footer a:hover { color: rgba(255,255,255,0.6) !important; }
-        button.notify-btn:hover { background: rgba(255,255,255,0.85) !important; }
+
+        /* github btn */
+        .github-btn {
+          font-family: 'Orbitron', sans-serif;
+          font-size: clamp(9px, 1.2vw, 12px);
+          font-weight: 600;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.6);
+          border: 1px solid rgba(255,255,255,0.3);
+          padding: 10px 22px;
+          text-decoration: none;
+          transition: border-color 0.25s, color 0.25s, background 0.25s;
+          white-space: nowrap;
+        }
+        .github-btn:hover {
+          border-color: #fff;
+          color: #000;
+          background: #fff;
+        }
+
+        /* notify btn */
+        .notify-btn {
+          font-family: 'Orbitron', sans-serif;
+          font-weight: 900;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          cursor: pointer;
+          border: none;
+          transition: background 0.2s, color 0.2s;
+          white-space: nowrap;
+          position: relative;
+          overflow: hidden;
+        }
+        .notify-btn::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+          transform: translateX(-100%);
+          transition: transform 0.5s;
+        }
+        .notify-btn:hover::after { transform: translateX(100%); }
+
+        /* footer link */
+        .footer-link { color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.2s; }
+        .footer-link:hover { color: #fff; }
+
+        /* cursor blink */
+        .cursor {
+          display: inline-block;
+          width: 2px;
+          height: 1.1em;
+          background: #fff;
+          margin-left: 3px;
+          vertical-align: middle;
+          animation: cursor-blink 0.8s infinite;
+        }
+
+        /* fade slide up helper */
+        .fade-up { opacity: 0; }
+        .fade-up.visible {
+          animation: fadeSlideUp 0.7s ease forwards;
+        }
+
+        /* ── Responsive ── */
+        .nav-wrap       { padding: 18px 20px; }
+        .nav-brand-text { font-size: 13px; }
+        .hero-logo      { width: 110px; height: 110px; }
+        .hero-brand     { font-size: 11px; letter-spacing: 0.45em; }
+        .coming-badge   { font-size: 15px; letter-spacing: 0.28em; padding: 11px 20px; }
+        .tagline-wrap   { font-size: 13px; max-width: 310px; min-height: 52px; }
+        .email-form     { max-width: 320px; }
+        .email-input    { font-size: 12px; padding: 14px 14px; }
+        .notify-btn     { font-size: 11px; padding: 14px 16px; }
+        .footer-wrap    { padding: 18px 20px; flex-direction: column; align-items: flex-start; gap: 14px; }
+        .footer-links   { gap: 20px; font-size: 13px; }
+        .footer-copy    { font-size: 11px; }
+        .footer-logo    { width: 20px; height: 20px; }
+
+        @media (min-width: 640px) {
+          .nav-wrap       { padding: 22px 36px; }
+          .nav-brand-text { font-size: 15px; }
+          .hero-logo      { width: 140px; height: 140px; }
+          .hero-brand     { font-size: 13px; }
+          .coming-badge   { font-size: 20px; letter-spacing: 0.4em; padding: 13px 30px; }
+          .tagline-wrap   { font-size: 16px; max-width: 430px; min-height: 58px; }
+          .email-form     { max-width: 420px; }
+          .email-input    { font-size: 14px; padding: 16px 20px; }
+          .notify-btn     { font-size: 12px; padding: 16px 22px; }
+          .footer-wrap    { padding: 20px 36px; flex-direction: row; align-items: center; }
+          .footer-links   { gap: 28px; font-size: 15px; }
+          .footer-copy    { font-size: 12px; }
+          .footer-logo    { width: 24px; height: 24px; }
+        }
+
+        @media (min-width: 1024px) {
+          .nav-wrap       { padding: 28px 60px; }
+          .nav-brand-text { font-size: 17px; }
+          .hero-logo      { width: 170px; height: 170px; }
+          .hero-brand     { font-size: 15px; letter-spacing: 0.55em; }
+          .coming-badge   { font-size: 26px; letter-spacing: 0.48em; padding: 16px 44px; }
+          .tagline-wrap   { font-size: 18px; max-width: 540px; min-height: 64px; }
+          .email-form     { max-width: 520px; }
+          .email-input    { font-size: 15px; padding: 18px 22px; }
+          .notify-btn     { font-size: 13px; padding: 18px 28px; }
+          .footer-wrap    { padding: 24px 60px; }
+          .footer-links   { gap: 36px; font-size: 16px; }
+          .footer-copy    { font-size: 13px; }
+          .footer-logo    { width: 28px; height: 28px; }
+        }
       `}</style>
 
-      <div className="orbitron" style={{ minHeight: "100vh", backgroundColor: "#000", color: "#fff", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
+      <div className="font-orbitron" style={{ minHeight: "100vh", backgroundColor: "#000", color: "#fff", display: "flex", flexDirection: "column", overflowX: "hidden" }}>
         <Starfield />
 
         {/* Scanlines */}
-        <div style={{ position: "fixed", inset: 0, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.055) 2px,rgba(0,0,0,0.055) 4px)", pointerEvents: "none", zIndex: 1 }} />
+        <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.055) 2px,rgba(0,0,0,0.055) 4px)" }} />
 
-        {/* ── NAV ── */}
-        <nav style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "28px 52px", borderBottom: "1px solid rgba(255,255,255,0.09)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        {/* Scan line sweep */}
+        <div style={{ position: "fixed", left: 0, top: 0, width: "100%", height: "3px", background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)", pointerEvents: "none", zIndex: 2, animation: "scan 8s linear infinite" }} />
+
+        {/* ══ NAV ══ */}
+        <nav className="nav-wrap" style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.09)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Alien-Protocol.png"
-              alt="Alien Protocol Logo"
-              width={44}
-              height={44}
-              style={{ filter: "drop-shadow(0 0 8px rgba(255,255,255,0.4))" }}
-            />
-            <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)" }}>
-              Alien <span style={{ color: "#fff", fontWeight: 900 }}>Protocol</span>
+            <img src="/Alien-Protocol.png" alt="Alien Protocol Logo" width={40} height={40} style={{ display: "block", mixBlendMode: "screen" }} />
+            <span className="nav-brand-text font-orbitron shimmer-text" style={{ fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase" }}>
+              Alien Protocol
             </span>
           </div>
-          <a
-            href="https://github.com/Alien-Protocol/Alien-Gateway"
-            target="_blank"
-            rel="noreferrer"
-            className="github-btn"
-            style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.25)", padding: "11px 26px", textDecoration: "none", transition: "all 0.2s" }}
-          >
+          <a href="https://github.com/Alien-Protocol/Alien-Gateway" target="_blank" rel="noreferrer" className="github-btn">
             GitHub ↗
           </a>
         </nav>
 
-        {/* ── HERO ── */}
-        <main style={{ position: "relative", zIndex: 10, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "80px 32px" }}>
+        {/* ══ HERO ══ */}
+        <main style={{ position: "relative", zIndex: 10, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "60px 20px" }}>
 
-          {/* PNG Logo with pulsing glow */}
-          <div style={{ marginBottom: 44, animation: "glow-pulse 3s ease-in-out infinite" }}>
+          {/* Logo */}
+          <div
+            className={`fade-up${visible ? " visible" : ""}`}
+            style={{ marginBottom: 32, animation: visible ? "fadeSlideUp 0.6s ease forwards, glow-pulse 3s ease-in-out 0.6s infinite" : undefined }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/Alien-Protocol.png"
-              alt="Alien Protocol"
-              width={170}
-              height={170}
-              style={{ display: "block" }}
-            />
+            <img src="/Alien-Protocol.png" alt="Alien Protocol" className="hero-logo" style={{ display: "block", mixBlendMode: "screen" }} />
           </div>
 
           {/* Brand name */}
-          <p style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.55em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)", marginBottom: 30 }}>
+          <p
+            className={`hero-brand font-raj fade-up${visible ? " visible" : ""}`}
+            style={{ fontWeight: 700, textTransform: "uppercase", color: "rgba(255,255,255,0.55)", marginBottom: 24, animationDelay: "0.15s" }}
+          >
             Alien Protocol
           </p>
 
-          {/* COMING SOON — bold & big */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 14, border: "2px solid rgba(255,255,255,0.55)", padding: "14px 38px", marginBottom: 44, background: "rgba(255,255,255,0.04)" }}>
-            <span style={{ width: 10, height: 10, backgroundColor: "#fff", display: "inline-block", borderRadius: "50%", animation: "blink 1.4s infinite" }} />
-            <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "0.45em", textTransform: "uppercase", color: "#fff" }}>
-              Coming Soon
-            </span>
-            <span style={{ width: 10, height: 10, backgroundColor: "#fff", display: "inline-block", borderRadius: "50%", animation: "blink 1.4s infinite 0.7s" }} />
+          {/* COMING SOON */}
+          <div
+            className={`coming-badge font-orbitron fade-up${visible ? " visible" : ""}`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 14, border: "2px solid rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.04)", marginBottom: 36, animationDelay: "0.28s", animation: visible ? "fadeSlideUp 0.7s 0.28s ease forwards, badge-flicker 8s 1s infinite" : undefined }}
+          >
+            <span style={{ width: 9, height: 9, backgroundColor: "#fff", display: "inline-block", borderRadius: "50%", animation: "blink 1.4s infinite" }} />
+            <span style={{ fontWeight: 900, textTransform: "uppercase", color: "#fff" }}>Coming Soon</span>
+            <span style={{ width: 9, height: 9, backgroundColor: "#fff", display: "inline-block", borderRadius: "50%", animation: "blink 1.4s infinite 0.7s" }} />
           </div>
 
-          {/* Tagline */}
-          <p style={{ fontSize: 18, fontWeight: 500, color: "rgba(255,255,255,0.6)", maxWidth: 500, lineHeight: 2.0, marginBottom: 52, letterSpacing: "0.06em" }}>
-            Privacy-preserving username system for Stellar.
-            <br />
-            Send crypto to{" "}
-            <span style={{ color: "#fff", fontWeight: 800 }}>@username</span>
-            {" "}— not a 56-char address.
-          </p>
+          {/* Typewriter tagline */}
+          <div
+            className={`tagline-wrap font-exo fade-up${visible ? " visible" : ""}`}
+            style={{ fontWeight: 500, color: "rgba(255,255,255,0.78)", lineHeight: 1.85, marginBottom: 44, letterSpacing: "0.04em", display: "flex", alignItems: "center", justifyContent: "center", animationDelay: "0.42s" }}
+          >
+            <span>{typed}</span>
+            <span className="cursor" />
+          </div>
 
-          {/* Email notify form */}
+          {/* Email form */}
           {!submitted ? (
             <form
+              className={`email-form fade-up${visible ? " visible" : ""}`}
               onSubmit={(e) => { e.preventDefault(); if (email) setSubmitted(true); }}
-              style={{ display: "flex", border: "1px solid rgba(255,255,255,0.3)", width: "100%", maxWidth: 500 }}
+              style={{ display: "flex", border: "1.5px solid rgba(255,255,255,0.32)", width: "100%", animationDelay: "0.55s", animation: visible ? `fadeSlideUp 0.7s 0.55s ease forwards, btn-pulse 2.5s 1.5s ease-in-out infinite` : undefined }}
             >
               <input
                 type="email"
                 placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", padding: "18px 22px", fontFamily: "'Orbitron', monospace", fontSize: 14, color: "#fff", letterSpacing: "0.08em" }}
+                className="email-input font-exo"
+                style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", letterSpacing: "0.06em", fontWeight: 500, minWidth: 0 }}
               />
               <button
                 type="submit"
                 className="notify-btn"
-                style={{ background: "#fff", color: "#000", border: "none", borderLeft: "1px solid rgba(255,255,255,0.2)", padding: "18px 28px", fontFamily: "'Orbitron', monospace", fontSize: 13, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", transition: "background 0.2s", whiteSpace: "nowrap" }}
+                onMouseEnter={() => setBtnHover(true)}
+                onMouseLeave={() => setBtnHover(false)}
+                style={{
+                  background: btnHover ? "rgba(255,255,255,0.88)" : "#fff",
+                  color: "#000",
+                  animation: "btn-pulse 2.5s 1.5s ease-in-out infinite",
+                }}
               >
                 Notify Me
               </button>
             </form>
           ) : (
-            <div style={{ border: "1px solid rgba(255,255,255,0.3)", padding: "18px 44px", fontSize: 15, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)" }}>
+            <div className="font-orbitron" style={{ border: "1.5px solid rgba(255,255,255,0.32)", padding: "18px 36px", fontSize: "clamp(12px, 2vw, 15px)", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.75)", animation: "fadeSlideUp 0.5s ease forwards" }}>
               ✓ &nbsp; You&apos;re on the list
             </div>
           )}
 
-          <p style={{ marginTop: 16, fontSize: 12, fontWeight: 400, letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)" }}>
+          <p
+            className={`font-raj fade-up${visible ? " visible" : ""}`}
+            style={{ marginTop: 14, fontSize: "clamp(11px, 1.5vw, 14px)", fontWeight: 600, letterSpacing: "0.22em", textTransform: "uppercase", color: "rgba(255,255,255,0.32)", animationDelay: "0.65s" }}
+          >
             No spam. Launch announcement only.
           </p>
         </main>
 
-        {/* ── FOOTER ── */}
-        <footer style={{ position: "relative", zIndex: 10, borderTop: "1px solid rgba(255,255,255,0.09)", padding: "24px 52px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* ══ FOOTER ══ */}
+        <footer className="footer-wrap" style={{ position: "relative", zIndex: 10, borderTop: "1px solid rgba(255,255,255,0.09)", display: "flex", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Alien-Protocol.png" alt="logo" width={28} height={28} style={{ opacity: 0.5 }} />
-            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)" }}>
-              Alien Protocol © 2025
+            <img src="/Alien-Protocol.png" alt="logo" className="footer-logo" style={{ mixBlendMode: "screen", opacity: 0.85 }} />
+            <span className="footer-copy font-orbitron" style={{ fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)" }}>
+              Alien Protocol © 2026
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 32, fontSize: 12, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)" }}>
-            <a href="https://github.com/Alien-Protocol/Alien-Gateway" target="_blank" rel="noreferrer" style={{ color: "rgba(255,255,255,0.28)", textDecoration: "none", transition: "color 0.2s" }}>
-              GitHub
-            </a>
-            <span>Built for Stellar</span>
-            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 7, height: 7, backgroundColor: "rgba(255,255,255,0.4)", display: "inline-block", borderRadius: "50%", animation: "blink 2s infinite" }} />
+
+          <div className="footer-links font-raj" style={{ display: "flex", alignItems: "center", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.55)", flexWrap: "wrap" }}>
+            <a href="https://github.com/Alien-Protocol/Alien-Gateway" target="_blank" rel="noreferrer" className="footer-link">GitHub</a>
+            <span>Built on Stellar</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ width: 7, height: 7, backgroundColor: "rgba(255,255,255,0.6)", display: "inline-block", borderRadius: "50%", animation: "blink 2s infinite" }} />
               ZK-Powered
             </span>
           </div>
