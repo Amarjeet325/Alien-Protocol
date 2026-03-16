@@ -78,8 +78,31 @@ function useTypewriter(texts: string[], speed = 60, pause = 2200) {
 export default function Home() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [btnHover, setBtnHover] = useState(false);
   const [visible, setVisible] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const typed = useTypewriter([
     "Privacy-preserving usernames for Stellar.",
@@ -334,7 +357,7 @@ export default function Home() {
           {!submitted ? (
             <form
               className={`email-form fade-up${visible ? " visible" : ""}`}
-              onSubmit={(e) => { e.preventDefault(); if (email) setSubmitted(true); }}
+              onSubmit={handleSubmit}
               style={{ display: "flex", border: "1.5px solid rgba(255,255,255,0.32)", width: "100%", animationDelay: "0.55s", animation: visible ? `fadeSlideUp 0.7s 0.55s ease forwards, btn-pulse 2.5s 1.5s ease-in-out infinite` : undefined }}
             >
               <input
@@ -356,9 +379,15 @@ export default function Home() {
                   animation: "btn-pulse 2.5s 1.5s ease-in-out infinite",
                 }}
               >
-                Notify Me
+                {loading ? "SENDING..." : "Notify Me"}
               </button>
+              {error && (
+                <p className="font-exo" style={{ marginTop: 10, fontSize: 13, color: "rgba(255,100,100,0.85)", letterSpacing: "0.06em" }}>
+                  ⚠ {error}
+                </p>
+              )}
             </form>
+
           ) : (
             <div className="font-orbitron" style={{ border: "1.5px solid rgba(255,255,255,0.32)", padding: "18px 36px", fontSize: "clamp(12px, 2vw, 15px)", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(255,255,255,0.75)", animation: "fadeSlideUp 0.5s ease forwards" }}>
               ✓ &nbsp; You&apos;re on the list
