@@ -2,9 +2,12 @@
 
 mod storage;
 
-use soroban_sdk::{contract, contractevent, contractimpl, Address, Env};
+use soroban_sdk::{contract, contractevent, contractimpl, Address, Env, Vec};
 
-use storage::{add_asset, get_admin, is_asset_supported, set_admin};
+use storage::{
+    add_asset, get_admin, get_position_index, get_position, is_asset_supported, set_admin,
+};
+pub use storage::Position;
 
 // ── Error / panic messages ───────────────────────────────────────────────────
 
@@ -72,6 +75,27 @@ impl CollateralVault {
     /// Returns `true` if the given asset has been whitelisted as collateral.
     pub fn is_supported_asset(env: Env, asset: Address) -> bool {
         is_asset_supported(&env, &asset)
+    }
+
+    /// Returns all active collateral positions.
+    ///
+    /// Iterates the `PositionIndex` (a `Vec<Address>` of users with active
+    /// positions) and loads each `Position` from persistent storage.
+    /// Users who have fully withdrawn will not appear in the index and are
+    /// therefore excluded from the result.
+    ///
+    /// No authentication required — public read.
+    pub fn get_all_positions(env: Env) -> Vec<Position> {
+        let index = get_position_index(&env);
+        let mut positions: Vec<Position> = Vec::new(&env);
+
+        for user in index.iter() {
+            if let Some(position) = get_position(&env, &user) {
+                positions.push_back(position);
+            }
+        }
+
+        positions
     }
 
     /// Returns the current admin address.
@@ -182,5 +206,104 @@ mod tests {
 
         assert!(client.is_supported_asset(&asset_a));
         assert!(client.is_supported_asset(&asset_b));
+    }
+
+    // ── get_all_positions ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_get_all_positions_empty() {
+        let (_env, client, _admin) = setup();
+        // No deposits have been made — must return an empty Vec.
+        let positions = client.get_all_positions();
+        assert_eq!(positions.len(), 0);
+    }
+
+    #[test]
+    fn test_get_all_positions_after_deposits() {
+        use storage::{index_add_user, set_position, Position};
+
+        let (env, client, _admin) = setup();
+        let asset = Address::generate(&env);
+        let user_a = Address::generate(&env);
+        let user_b = Address::generate(&env);
+
+        // Simulate what deposit will do: write Position + update index.
+        set_position(
+            &env,
+            &Position {
+                user: user_a.clone(),
+                asset: asset.clone(),
+                amount: 500,
+            },
+        );
+        index_add_user(&env, &user_a);
+
+        set_position(
+            &env,
+            &Position {
+                user: user_b.clone(),
+                asset: asset.clone(),
+                amount: 300,
+            },
+        );
+        index_add_user(&env, &user_b);
+
+        let positions = client.get_all_positions();
+        assert_eq!(positions.len(), 2);
+    }
+
+    #[test]
+    fn test_get_all_positions_excludes_withdrawn_users() {
+        use storage::{index_add_user, index_remove_user, remove_position, set_position, Position};
+
+        let (env, client, _admin) = setup();
+        let asset = Address::generate(&env);
+        let user_a = Address::generate(&env);
+        let user_b = Address::generate(&env);
+
+        // Both users deposit.
+        set_position(
+            &env,
+            &Position {
+                user: user_a.clone(),
+                asset: asset.clone(),
+                amount: 500,
+            },
+        );
+        index_add_user(&env, &user_a);
+
+        set_position(
+            &env,
+            &Position {
+                user: user_b.clone(),
+                asset: asset.clone(),
+                amount: 300,
+            },
+        );
+        index_add_user(&env, &user_b);
+
+        // user_b fully withdraws — simulate what withdraw will do.
+        remove_position(&env, &user_b);
+        index_remove_user(&env, &user_b);
+
+        let positions = client.get_all_positions();
+        // Only user_a should remain.
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions.get(0).unwrap().user, user_a);
+    }
+
+    #[test]
+    fn test_index_does_not_duplicate_user() {
+        use storage::{get_position_index, index_add_user};
+
+        let (env, _client, _admin) = setup();
+        let user = Address::generate(&env);
+
+        index_add_user(&env, &user);
+        index_add_user(&env, &user); // second call — must be a no-op
+        index_add_user(&env, &user); // third call — must be a no-op
+
+        let index = get_position_index(&env);
+        assert_eq!(index.len(), 1);
     }
 }
